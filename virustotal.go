@@ -1,9 +1,8 @@
-package main
+package virustotal
 
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -34,53 +33,34 @@ type VTAnalysisResponse struct {
 	} `json:"data"`
 }
 
-func main() {
+func CheckPhishingVirusTotal(apiKey string, inputURL string) int {
 	apiURL := "https://www.virustotal.com/api/v3/urls"
-	apiKey := "964c04c983e6f0f57f4d5a48e1c663abe9de95485119f376d870629f2e9c854d" // Geçerli API anahtarınızı ekleyin
-
-	// URL'yi komut satırından al
-	urlPtr := flag.String("url", "", "kontrol edilecek url")
-	flag.Parse()
-
-	if *urlPtr == "" {
-		fmt.Println("Lütfen kontrol edilecek bir URL belirtin.")
-		return
-	}
-
-	// URL'yi encode et
-	encodedURL := url.QueryEscape(*urlPtr)
+	encodedURL := url.QueryEscape(inputURL)
 	payload := "url=" + encodedURL
 
-	// URL'yi gönder
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer([]byte(payload)))
 	if err != nil {
 		fmt.Println("İstek oluşturma hatası", err)
-		return
+		return 0
 	}
 
-	// Başlıkları ayarla
 	req.Header.Add("accept", "application/json")
-	req.Header.Add("x-apikey", apiKey) // API anahtarını buraya ekleyin
+	req.Header.Add("x-apikey", apiKey)
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
 
-	// İsteği gönder
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println("API istek hatası:", err)
-		return
+		return 0
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println("Yanıt okuma hatası:", err)
-		return
+		return 0
 	}
 
-	// İlk yanıtı yazdır
-	fmt.Println("API Yanıtı:", string(body))
-
-	// Eğer isteğin durumu başarısızsa, durumu kontrol et
 	if res.StatusCode != http.StatusOK {
 		var sendResponse VTSendResponse
 		if err := json.Unmarshal(body, &sendResponse); err == nil {
@@ -88,57 +68,46 @@ func main() {
 		} else {
 			fmt.Printf("Hata: %d - %s\n", res.StatusCode, http.StatusText(res.StatusCode))
 		}
-		return
+		return 0
 	}
 
-	// Eğer istek başarılıysa, ID'yi kullanarak analizi sorgula
 	var sendResponse VTSendResponse
 	if err := json.Unmarshal(body, &sendResponse); err != nil {
 		fmt.Println("JSON unmarshal hatası:", err)
-		return
+		return 0
 	}
 
-	// Analiz sonucunu al
 	analysisID := sendResponse.Data.ID
 	analysisURL := "https://www.virustotal.com/api/v3/analyses/" + analysisID
 
 	analysisReq, err := http.NewRequest("GET", analysisURL, nil)
 	if err != nil {
 		fmt.Println("Analiz isteği oluşturma hatası:", err)
-		return
+		return 0
 	}
 
-	// Başlıkları ayarla
 	analysisReq.Header.Add("accept", "application/json")
-	analysisReq.Header.Add("x-apikey", apiKey) // API anahtarını buraya ekleyin
+	analysisReq.Header.Add("x-apikey", apiKey)
 
-	// Analiz isteğini gönder
 	analysisRes, err := http.DefaultClient.Do(analysisReq)
 	if err != nil {
 		fmt.Println("Analiz API'si istek hatası:", err)
-		return
+		return 0
 	}
 	defer analysisRes.Body.Close()
 
 	analysisBody, err := io.ReadAll(analysisRes.Body)
 	if err != nil {
 		fmt.Println("Analiz yanıtı okuma hatası:", err)
-		return
+		return 0
 	}
 
-	// Analiz sonucunu yazdır
 	var analysisResponse VTAnalysisResponse
 	if err := json.Unmarshal(analysisBody, &analysisResponse); err != nil {
 		fmt.Println("Analiz JSON hatası:", err)
-		return
+		return 0
 	}
 
-	fmt.Printf("Analiz ID: %s\n", analysisResponse.Data.ID)
-	fmt.Printf("Kötü Amaçlı: %d\n", analysisResponse.Data.Attributes.Stats.Malicious)
-	fmt.Printf("Belirsiz: %d\n", analysisResponse.Data.Attributes.Stats.Undetected)
-	fmt.Printf("Spam: %d\n", analysisResponse.Data.Attributes.Stats.Spam)
-
-	// Phishing durumu belirle
 	var phishingStatus int
 	if analysisResponse.Data.Attributes.Stats.Malicious > 0 {
 		phishingStatus = 1 // Kötü amaçlı
@@ -149,6 +118,5 @@ func main() {
 	} else {
 		phishingStatus = -1 // Kötü amaçlı değil
 	}
-
-	fmt.Printf("Phishing Durumu: %d\n", phishingStatus)
+	return phishingStatus
 }
