@@ -1,69 +1,162 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
+	"net"
+	"net/url"
+	"phishingTool/IPQualityScore"
+	_ "phishingTool/abuseIP"
+	abuseIp "phishingTool/abuseIP"
+	"phishingTool/googleSB"
+	_ "phishingTool/googleSB"
+	"phishingTool/usom"
+	_ "phishingTool/usom"
+	"phishingTool/virustotal"
+	"phishingTool/whois"
+	"regexp"
+	"strings"
 )
 
-const apiKey = "AIzaSyDjrV9r8kM-hr3MskbeqziqSXAa2PRrfas"
+func riskEvaluate(urlStr string) string {
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return "Geçersiz URL"
+	}
+
+	riskPoint := 0
+
+	if parsedURL.Scheme != "https" {
+		riskPoint += 2
+		fmt.Println("Risk: HTTPS kullanılmıyor")
+	}
+
+	if len(parsedURL.String()) > 50 {
+		riskPoint += 2
+		fmt.Println("Risk: URL çok uzun")
+	}
+
+	shorteners := []string{"bit.ly", "tinyurl.com", "goo.gl", "t.co", "is.gd", "buff.ly",
+		"ow.ly", "shorte.st", "adf.ly", "cli.re", "bl.ink", "v.gd", "qr.ae", "post.ly", "u.to",
+		"short.ie", "wp.me", "snipr.com", "po.st", "fic.kr", "tweez.me", "lnkd.in", "v.gd"}
+	for _, shortener := range shorteners {
+		if strings.Contains(parsedURL.Host, shortener) {
+			riskPoint += 3
+			fmt.Println("Risk: Kısaltılmış URL kullanımı")
+			break
+		}
+	}
+
+	phishingKeys := []string{"secure", "login", "account", "signin", "update", "verify", "password", "aws",
+		"payment", "paypal", "confirm", "webscr", "restrict", "unusual", "activity", "suspend", "bank", "microsoft", "cloud"}
+	for _, keyword := range phishingKeys {
+		if strings.Contains(urlStr, keyword) {
+			riskPoint += 2
+			fmt.Println("Risk: Phishing bağlantılı kelime kullanımı")
+			break
+		}
+	}
+
+	suspiciousExtensions := []string{".tk", ".ml", ".ga", ".cf", ".gq", ".xyz", ".pw", ".top", ".club",
+		".info", ".cc", ".ws", ".buzz", ".space", ".review", ".biz", ".trade", ".bid", ".loan", ".date", ".faith",
+		".racing", ".freenom", ".partners", ".ventures", ".cheap", ".guru", ".domains", ".plumbing"}
+	for _, ext := range suspiciousExtensions {
+		if strings.HasSuffix(parsedURL.Host, ext) {
+			riskPoint += 3
+			fmt.Println("Risk: Şüpheli domain uzantısı kullanımı")
+			break
+		}
+	}
+
+	host := parsedURL.Hostname()
+	if net.ParseIP(host) != nil {
+		riskPoint += 3
+		fmt.Println("Risk: URL'de IP adresi kullanımı")
+	}
+
+	subdomains := strings.Split(parsedURL.Host, ".")
+	if len(subdomains) > 3 {
+		riskPoint += 2
+		fmt.Println("Risk: Şüpheli subdomain kullanımı")
+	}
+
+	suspiciousCharPattern := `[@!%&\^\*\(\)\{\}\[\]\\:;\"\'<>,\?\/~]`
+	if matched, _ := regexp.MatchString(suspiciousCharPattern, urlStr); matched {
+		riskPoint += 2
+		fmt.Println("Risk: Şüpheli karakterler içeriyor")
+	}
+
+	ageRisk, err := whois.GetDomainAgeRiskPoint(parsedURL.Hostname())
+	if err != nil {
+		fmt.Println("Domain yaşı kontrolü yapılırken hata:", err)
+	} else {
+		riskPoint += ageRisk
+	}
+
+	if riskPoint >= 7 {
+		return "Phishing sitesi olabilir (Risk Puanı: " + fmt.Sprint(riskPoint) + ")"
+	}
+	return "Phishing sitesi değil (Risk Puanı: " + fmt.Sprint(riskPoint) + ")"
+}
 
 func main() {
-	urlFlag := flag.String("url", "", "Kontrol edilecek URL")
+	urlPtr := flag.String("u", "", "Kontrol edilecek URL")
 	flag.Parse()
 
-	if *urlFlag == "" {
-		fmt.Println("Bir URL girmeniz gerekiyor.")
-		os.Exit(1)
+	if *urlPtr == "" {
+		fmt.Println("\nLütfen geçerli bir URL giriniz.")
+		return
 	}
 
-	//if !strings.HasPrefix(*urlFlag, "http://") && !strings.HasPrefix(*urlFlag, "https://") {
-	//	*urlFlag = "https://" + *urlFlag
-	//}
-
-	apiURL := "https://safebrowsing.googleapis.com/v4/threatMatches:find?key=" + apiKey
-	reqBody := fmt.Sprintf(`{
-		"client": {
-			"clientId": "Cuneyt",
-			"clientVersion": "1.5.2"
-		},
-		"threatInfo": {
-			"threatTypes": ["MALWARE", "SOCIAL_ENGINEERING"],
-			"platformTypes": ["WINDOWS"],
-			"threatEntryTypes": ["URL"],
-			"threatEntries": [
-				{"url": "%s"}
-			]
-		}
-	}`, *urlFlag)
-
-	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer([]byte(reqBody)))
-	if err != nil {
-		fmt.Println("Request oluşturulurken hata:", err)
-		os.Exit(1)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("API'ye istek gönderilirken hata:", err)
-		os.Exit(1)
-	}
-	defer resp.Body.Close()
-
-	body, _ := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode == http.StatusOK {
-		if bytes.Contains(body, []byte("matches")) {
-			fmt.Println(1) // Phishing
-		} else {
-			fmt.Println(-1) // Phishing değil
-		}
+	usomResult, usomDetails := usom.CheckPhishing(*urlPtr)
+	if usomResult {
+		fmt.Printf("URL USOM'da phishing olarak bulundu: %v\n", usomDetails)
+		return
 	} else {
-		fmt.Println(0) // Bilinmiyor
+		fmt.Println("URL USOM içerisinde bulunamadı")
 	}
+
+	abuseIpResult, abuseIPDetails := abuseIp.CheckURLInAbuseIPDB(*urlPtr)
+	if abuseIpResult == 1 {
+		fmt.Printf("URL AbuseIP'de phishing olarak bulundu: %v\n", abuseIPDetails)
+		return
+	} else if abuseIpResult == -1 {
+		fmt.Println("URL AbuseIP'de güvenli olarak bulundu")
+	} else if abuseIpResult == 0 {
+		fmt.Println("URL AbuseIP içerisinde bulunamadı")
+	}
+
+	googleSBResult, googleSBDetails := googleSB.CheckPhishingGoogleSB(*urlPtr)
+	if googleSBResult == 1 {
+		fmt.Printf("URL Google Safe Browsing'de phishing olarak bulundu: %v\n", googleSBDetails)
+	} else if googleSBResult == -1 {
+		fmt.Println("URL Google Safe Browsing içerisinde bulunamadı")
+	} else if googleSBResult == 0 {
+		fmt.Println("Google Safe Browsing sonucu belirsiz")
+	}
+
+	ipqs := IPQualityScore.IPQS{Key: "bBCLuOX94Hag9c0DtlHpj5UZxYgyA9al"} // API key'i buraya ekleyin
+	params := map[string]string{}                                        // Gerekli parametreleri buraya ekleyin
+	ipqsResult, err := ipqs.MaliciousURLScannerAPI(*urlPtr, params)
+	if err != nil {
+		fmt.Println("IPQualityScore kontrolü sırasında hata:", err)
+		return
+	}
+	if ipqsCheck := IPQualityScore.CheckPhishing(ipqsResult); ipqsCheck == 1 {
+		fmt.Println(" URL IPQualityScore'da phishing olarak bulundu")
+		return
+	} else if ipqsCheck == -1 {
+		fmt.Println(" URL IPQualityScore içerisinde bulunamadı")
+	}
+
+	apiKey := "964c04c983e6f0f57f4d5a48e1c663abe9de95485119f376d870629f2e9c854d" // Replace with your actual API key
+	vtResult := virustotal.CheckPhishingVirusTotal(apiKey, *urlPtr)
+	if vtResult == 1 {
+		fmt.Println(" URL VirusTotal'de phishing olarak bulundu")
+		return
+	} else if vtResult == -1 {
+		fmt.Println(" URL VirusTotal içerisinde bulunamadı")
+	}
+	result := riskEvaluate(*urlPtr)
+	fmt.Println(result)
 }
