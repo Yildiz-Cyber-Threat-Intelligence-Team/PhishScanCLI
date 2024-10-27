@@ -57,3 +57,4 @@ func CheckURLInAbuseIPDB(rawURL string) (int, error) {
 		return 1, nil
 	}
 }
+
