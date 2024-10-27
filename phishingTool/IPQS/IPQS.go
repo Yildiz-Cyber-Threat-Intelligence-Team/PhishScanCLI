@@ -1,4 +1,4 @@
-package IPQualityScore
+package IPQS
 
 import (
 	"encoding/json"

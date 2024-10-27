@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"phishingTool/IPQualityScore"
-	_ "phishingTool/abuseIP"
+	IPQualityScore "phishingTool/IPQS"
 	abuseIp "phishingTool/abuseIP"
+	"phishingTool/fishAnimation"
 	"phishingTool/googleSB"
-	_ "phishingTool/googleSB"
 	"phishingTool/usom"
-	_ "phishingTool/usom"
 	"phishingTool/virustotal"
 	"phishingTool/whois"
+	"phishingTool/yildizAnimation"
 	"regexp"
 	"strings"
 )
@@ -100,6 +99,8 @@ func riskEvaluate(urlStr string) string {
 }
 
 func main() {
+	yildizAnimation.PrintAnimation()
+	fishAnimation.AnimateFish()
 	urlPtr := flag.String("u", "", "Kontrol edilecek URL")
 	flag.Parse()
 
@@ -108,8 +109,8 @@ func main() {
 		return
 	}
 
-	ipqs := IPQualityScore.IPQS{Key: "bBCLuOX94Hag9c0DtlHpj5UZxYgyA9al"} 
-	params := map[string]string{}                                       
+	ipqs := IPQualityScore.IPQS{Key: "bBCLuOX94Hag9c0DtlHpj5UZxYgyA9al"}
+	params := map[string]string{}
 	ipqsResult, err := ipqs.MaliciousURLScannerAPI(*urlPtr, params)
 	if err != nil {
 		fmt.Println("IPQualityScore kontrolü sırasında hata:", err)
