@@ -108,12 +108,44 @@ func main() {
 		return
 	}
 
+	ipqs := IPQualityScore.IPQS{Key: "bBCLuOX94Hag9c0DtlHpj5UZxYgyA9al"} 
+	params := map[string]string{}                                       
+	ipqsResult, err := ipqs.MaliciousURLScannerAPI(*urlPtr, params)
+	if err != nil {
+		fmt.Println("IPQualityScore kontrolü sırasında hata:", err)
+		return
+	}
+	if ipqsCheck := IPQualityScore.CheckPhishing(ipqsResult); ipqsCheck == 1 {
+		fmt.Println("URL IPQualityScore'da phishing olarak bulundu")
+		return
+	} else if ipqsCheck == -1 {
+		fmt.Println("URL IPQualityScore içerisinde bulunamadı")
+	}
+
 	usomResult, usomDetails := usom.CheckPhishing(*urlPtr)
 	if usomResult {
 		fmt.Printf("URL USOM'da phishing olarak bulundu: %v\n", usomDetails)
 		return
 	} else {
 		fmt.Println("URL USOM içerisinde bulunamadı")
+	}
+
+	googleSBResult, googleSBDetails := googleSB.CheckPhishingGoogleSB(*urlPtr)
+	if googleSBResult == 1 {
+		fmt.Printf("URL Google Safe Browsing'de phishing olarak bulundu: %v\n", googleSBDetails)
+	} else if googleSBResult == -1 {
+		fmt.Println("URL Google Safe Browsing içerisinde bulunamadı")
+	} else if googleSBResult == 0 {
+		fmt.Println("Google Safe Browsing sonucu belirsiz")
+	}
+
+	apiKey := "964c04c983e6f0f57f4d5a48e1c663abe9de95485119f376d870629f2e9c854d" // Replace with your actual API key
+	vtResult := virustotal.CheckPhishingVirusTotal(apiKey, *urlPtr)
+	if vtResult == 1 {
+		fmt.Println("URL VirusTotal'de phishing olarak bulundu")
+		return
+	} else if vtResult == -1 {
+		fmt.Println("URL VirusTotal içerisinde bulunamadı")
 	}
 
 	abuseIpResult, abuseIPDetails := abuseIp.CheckURLInAbuseIPDB(*urlPtr)
@@ -126,37 +158,6 @@ func main() {
 		fmt.Println("URL AbuseIP içerisinde bulunamadı")
 	}
 
-	googleSBResult, googleSBDetails := googleSB.CheckPhishingGoogleSB(*urlPtr)
-	if googleSBResult == 1 {
-		fmt.Printf("URL Google Safe Browsing'de phishing olarak bulundu: %v\n", googleSBDetails)
-	} else if googleSBResult == -1 {
-		fmt.Println("URL Google Safe Browsing içerisinde bulunamadı")
-	} else if googleSBResult == 0 {
-		fmt.Println("Google Safe Browsing sonucu belirsiz")
-	}
-
-	ipqs := IPQualityScore.IPQS{Key: "bBCLuOX94Hag9c0DtlHpj5UZxYgyA9al"} // API key'i buraya ekleyin
-	params := map[string]string{}                                        // Gerekli parametreleri buraya ekleyin
-	ipqsResult, err := ipqs.MaliciousURLScannerAPI(*urlPtr, params)
-	if err != nil {
-		fmt.Println("IPQualityScore kontrolü sırasında hata:", err)
-		return
-	}
-	if ipqsCheck := IPQualityScore.CheckPhishing(ipqsResult); ipqsCheck == 1 {
-		fmt.Println(" URL IPQualityScore'da phishing olarak bulundu")
-		return
-	} else if ipqsCheck == -1 {
-		fmt.Println(" URL IPQualityScore içerisinde bulunamadı")
-	}
-
-	apiKey := "964c04c983e6f0f57f4d5a48e1c663abe9de95485119f376d870629f2e9c854d" // Replace with your actual API key
-	vtResult := virustotal.CheckPhishingVirusTotal(apiKey, *urlPtr)
-	if vtResult == 1 {
-		fmt.Println(" URL VirusTotal'de phishing olarak bulundu")
-		return
-	} else if vtResult == -1 {
-		fmt.Println(" URL VirusTotal içerisinde bulunamadı")
-	}
 	result := riskEvaluate(*urlPtr)
 	fmt.Println(result)
 }
