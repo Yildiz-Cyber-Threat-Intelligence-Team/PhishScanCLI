@@ -1,28 +1,15 @@
-package main
+package googleSB
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 )
 
 const apiKey = "AIzaSyDjrV9r8kM-hr3MskbeqziqSXAa2PRrfas"
 
-func main() {
-	urlFlag := flag.String("url", "", "Kontrol edilecek URL")
-	flag.Parse()
-
-	if *urlFlag == "" {
-		fmt.Println("Bir URL girmeniz gerekiyor.")
-		os.Exit(1)
-	}
-
-	//if !strings.HasPrefix(*urlFlag, "http://") && !strings.HasPrefix(*urlFlag, "https://") {
-	//	*urlFlag = "https://" + *urlFlag
-	//}
+func CheckPhishingGoogleSB(url string) (int, error) {
 
 	apiURL := "https://safebrowsing.googleapis.com/v4/threatMatches:find?key=" + apiKey
 	reqBody := fmt.Sprintf(`{
@@ -38,12 +25,12 @@ func main() {
 				{"url": "%s"}
 			]
 		}
-	}`, *urlFlag)
+	}`, url)
 
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer([]byte(reqBody)))
 	if err != nil {
 		fmt.Println("Request oluşturulurken hata:", err)
-		os.Exit(1)
+		return 0, nil
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -51,7 +38,7 @@ func main() {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("API'ye istek gönderilirken hata:", err)
-		os.Exit(1)
+		return 0, nil
 	}
 	defer resp.Body.Close()
 
@@ -59,11 +46,11 @@ func main() {
 
 	if resp.StatusCode == http.StatusOK {
 		if bytes.Contains(body, []byte("matches")) {
-			fmt.Println(1) // Phishing
+			return 1, nil
 		} else {
-			fmt.Println(-1) // Phishing değil
+			return -1, nil // Phishing değil
 		}
-	} else {
-		fmt.Println(0) // Bilinmiyor
 	}
+
+	return 0, nil
 }
