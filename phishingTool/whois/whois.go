@@ -19,11 +19,29 @@ type WhoisResponse struct {
 	WhoisRecord WhoisRecord `json:"WhoisRecord"`
 }
 
+// CheckDomainAge attempts to parse the creation date using multiple formats.
 func checkDomainAge(createdDate string) int {
-	// Tarih formatı: "2018-05-25T22:36:11Z"
-	t, err := time.Parse(time.RFC3339, createdDate)
+	// Updated formats to include cases with `T` separator and timezone offsets
+	formats := []string{
+		time.RFC3339,
+		"2006-01-02T15:04:05-0700",  // With T separator and offset
+		"2006-01-02T15:04:05",       // Without timezone
+		"2006-01-02 15:04:05 -0700", // Space separator with offset
+		"2006-01-02",                // Date only
+	}
+
+	var t time.Time
+	var err error
+
+	// Try parsing with each format until successful
+	for _, format := range formats {
+		t, err = time.Parse(format, createdDate)
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
-		fmt.Println("Tarih parse edilemedi:", err)
+		fmt.Println("Date parsing failed:", err)
 		return 0
 	}
 
@@ -33,7 +51,7 @@ func checkDomainAge(createdDate string) int {
 	return daysSinceRegistration
 }
 
-// WHOIS API sorgusu yapan fonksiyon
+// WHOIS API query function
 func GetDomainAgeRiskPoint(domain string) (int, error) {
 	apiURL := fmt.Sprintf("https://www.whoisxmlapi.com/whoisserver/WhoisService?apiKey=%s&domainName=%s&outputFormat=JSON", apiKey, domain)
 	resp, err := http.Get(apiURL)
@@ -47,19 +65,18 @@ func GetDomainAgeRiskPoint(domain string) (int, error) {
 		return 0, err
 	}
 
-	// Yanıtı parse etme
+	// Parse the response
 	var whoisResponse WhoisResponse
 	if err := json.Unmarshal(body, &whoisResponse); err != nil {
 		return 0, err
 	}
 
-	// Domain yaşı kontrolü
+	// Check domain age
 	days := checkDomainAge(whoisResponse.WhoisRecord.CreatedDate)
-	fmt.Printf("Domain '%s' kayıt tarihi: %s (%d gün önce kaydedildi).\n", whoisResponse.WhoisRecord.DomainName, whoisResponse.WhoisRecord.CreatedDate, days)
+	fmt.Printf("Domain '%s' registration date: %s (registered %d days ago).\n", whoisResponse.WhoisRecord.DomainName, whoisResponse.WhoisRecord.CreatedDate, days)
 
 	if days < 30 {
 		return 5, nil
 	}
 	return 0, nil
 }
-
