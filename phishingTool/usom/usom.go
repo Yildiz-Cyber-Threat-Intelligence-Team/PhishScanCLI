@@ -49,6 +49,12 @@ func CheckPhishing(url string) (bool, []Address) {
 		return false, nil
 	}
 
-	return addressResp.TotalCount > 0, addressResp.Models
-}
+	for _, address := range addressResp.Models {
+		normalizedAddressURL := NormalizeURL(address.URL)
+		if normalizedAddressURL == normalizedURL {
+			return true, []Address{address}
+		}
+	}
 
+	return false, addressResp.Models
+}
