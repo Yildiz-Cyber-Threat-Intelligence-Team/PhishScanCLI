@@ -33,19 +33,19 @@ func CheckPhishing(url string) (bool, []Address) {
 	apiURL := fmt.Sprintf("https://www.usom.gov.tr/api/address/index?q=%s", normalizedURL)
 	resp, err := http.Get(apiURL)
 	if err != nil {
-		fmt.Println("USOM API hatası:", err)
+		fmt.Println("USOM API error:", err)
 		return false, nil
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("USOM API yanıt okuma hatası:", err)
+		fmt.Println("Error reading USOM API response:", err)
 		return false, nil
 	}
 	var addressResp AddressResponse
 	if err := json.Unmarshal(body, &addressResp); err != nil {
-		fmt.Println("USOM JSON ayrıştırma hatası:", err)
+		fmt.Println("Error parsing USOM JSON:", err)
 		return false, nil
 	}
 
