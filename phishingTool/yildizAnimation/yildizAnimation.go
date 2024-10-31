@@ -34,7 +34,7 @@ func PrintAnimation() {
 	clearScreen()
 
 	titles := []string{
-		"Yıldız Siber Tehdit İstihbaratı Takımı - Siber VATAN",
+		"Yıldız Cyber Threat Intelligence Team - Siber VATAN",
 	}
 
 	for _, title := range titles {
@@ -43,7 +43,7 @@ func PrintAnimation() {
 		clearScreen()
 	}
 
-	fmt.Println("Yıldız Siber Tehdit İstihbaratı Takımı - Siber VATAN")
+	fmt.Println("Yıldız Cyber Threat Intelligence Team - Siber VATAN")
 	fmt.Println()
 
 	fmt.Println(`@@@@@@@@@@@#+-:..+@@@@@@@@@@@@@@@@
@@ -63,6 +63,6 @@ func PrintAnimation() {
 @@@@@=.           .--=--=+%@@@@@@@
 @@@@@@@%:.  .:.       .=@@@@@@@@@@
 @@@@@@@@@@@%#*+*#**%@@@@@@@@@@@@@@`)
-	fmt.Println("Hadi balık tutalım...")
+	fmt.Println("Let's go fishing...")
 	fmt.Println()
 }
