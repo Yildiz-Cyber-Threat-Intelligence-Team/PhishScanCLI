@@ -40,7 +40,7 @@ func CheckPhishingVirusTotal(apiKey string, inputURL string) int {
 
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer([]byte(payload)))
 	if err != nil {
-		fmt.Println("İstek oluşturma hatası", err)
+		fmt.Println("Request error", err)
 		return 0
 	}
 
@@ -50,30 +50,30 @@ func CheckPhishingVirusTotal(apiKey string, inputURL string) int {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println("API istek hatası:", err)
+		fmt.Println("API request error", err)
 		return 0
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println("Yanıt okuma hatası:", err)
+		fmt.Println("Error reading response", err)
 		return 0
 	}
 
 	if res.StatusCode != http.StatusOK {
 		var sendResponse VTSendResponse
 		if err := json.Unmarshal(body, &sendResponse); err == nil {
-			fmt.Printf("Hata: %d - %s\n", res.StatusCode, sendResponse.Error.Message)
+			fmt.Printf("Error: %d - %s\n", res.StatusCode, sendResponse.Error.Message)
 		} else {
-			fmt.Printf("Hata: %d - %s\n", res.StatusCode, http.StatusText(res.StatusCode))
+			fmt.Printf("Error: %d - %s\n", res.StatusCode, http.StatusText(res.StatusCode))
 		}
 		return 0
 	}
 
 	var sendResponse VTSendResponse
 	if err := json.Unmarshal(body, &sendResponse); err != nil {
-		fmt.Println("JSON unmarshal hatası:", err)
+		fmt.Println("JSON unmarshal error:", err)
 		return 0
 	}
 
@@ -82,7 +82,7 @@ func CheckPhishingVirusTotal(apiKey string, inputURL string) int {
 
 	analysisReq, err := http.NewRequest("GET", analysisURL, nil)
 	if err != nil {
-		fmt.Println("Analiz isteği oluşturma hatası:", err)
+		fmt.Println("Error creating analysis request:", err)
 		return 0
 	}
 
@@ -91,32 +91,32 @@ func CheckPhishingVirusTotal(apiKey string, inputURL string) int {
 
 	analysisRes, err := http.DefaultClient.Do(analysisReq)
 	if err != nil {
-		fmt.Println("Analiz API'si istek hatası:", err)
+		fmt.Println("Error with analysis API request:", err)
 		return 0
 	}
 	defer analysisRes.Body.Close()
 
 	analysisBody, err := io.ReadAll(analysisRes.Body)
 	if err != nil {
-		fmt.Println("Analiz yanıtı okuma hatası:", err)
+		fmt.Println("Error reading analysis response:", err)
 		return 0
 	}
 
 	var analysisResponse VTAnalysisResponse
 	if err := json.Unmarshal(analysisBody, &analysisResponse); err != nil {
-		fmt.Println("Analiz JSON hatası:", err)
+		fmt.Println("Analysis JSON error:", err)
 		return 0
 	}
 
 	var phishingStatus int
 	if analysisResponse.Data.Attributes.Stats.Malicious > 0 {
-		phishingStatus = 1 // Kötü amaçlı
+		phishingStatus = 1 // Malicious
 	} else if analysisResponse.Data.Attributes.Stats.Spam > 0 {
 		phishingStatus = 1 // Spam
 	} else if analysisResponse.Data.Attributes.Stats.Undetected > 0 {
-		phishingStatus = 0 // Belirsiz
+		phishingStatus = 0 // Unknown
 	} else {
-		phishingStatus = -1 // Kötü amaçlı değil
+		phishingStatus = -1 // Not malicious
 	}
 	return phishingStatus
 }
