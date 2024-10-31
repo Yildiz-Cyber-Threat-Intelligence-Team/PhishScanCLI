@@ -29,7 +29,7 @@ func CheckPhishingGoogleSB(url string) (int, error) {
 
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer([]byte(reqBody)))
 	if err != nil {
-		fmt.Println("Request oluşturulurken hata:", err)
+		fmt.Println("Error creating request:", err)
 		return 0, nil
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -37,7 +37,7 @@ func CheckPhishingGoogleSB(url string) (int, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("API'ye istek gönderilirken hata:", err)
+		fmt.Println("Error sending request to API:", err)
 		return 0, nil
 	}
 	defer resp.Body.Close()
@@ -48,7 +48,7 @@ func CheckPhishingGoogleSB(url string) (int, error) {
 		if bytes.Contains(body, []byte("matches")) {
 			return 1, nil
 		} else {
-			return -1, nil // Phishing değil
+			return -1, nil // Not Phishing
 		}
 	}
 
