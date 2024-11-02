@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	IPQualityScore "phishingTool/IPQS"
 	abuseIp "phishingTool/abuseIP"
 	"phishingTool/fishAnimation"
@@ -15,6 +16,8 @@ import (
 	"phishingTool/yildizAnimation"
 	"regexp"
 	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 func riskEvaluate(urlStr string) string {
@@ -99,6 +102,15 @@ func riskEvaluate(urlStr string) string {
 }
 
 func main() {
+
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Error loading .env file")
+	}
+
+	ipqsApiKey := os.Getenv("IPQS_API_KEY")
+	virustotalApiKey := os.Getenv("VIRUSTOTAL_API_KEY")
+
 	yildizAnimation.PrintAnimation()
 	fishAnimation.AnimateFish()
 	urlPtr := flag.String("u", "", "URL to check")
@@ -109,7 +121,7 @@ func main() {
 		return
 	}
 
-	ipqs := IPQualityScore.IPQS{Key: "bBCLuOX94Hag9c0DtlHpj5UZxYgyA9al"}
+	ipqs := IPQualityScore.IPQS{Key: ipqsApiKey}
 	params := map[string]string{}
 	ipqsResult, err := ipqs.MaliciousURLScannerAPI(*urlPtr, params)
 	if err != nil {
@@ -140,7 +152,7 @@ func main() {
 		fmt.Println("Google Safe Browsing result uncertain")
 	}
 
-	apiKey := "964c04c983e6f0f57f4d5a48e1c663abe9de95485119f376d870629f2e9c854d" // Replace with your actual API key
+	apiKey := virustotalApiKey
 	vtResult := virustotal.CheckPhishingVirusTotal(apiKey, *urlPtr)
 	if vtResult == 1 {
 		fmt.Println("URL found as phishing in VirusTotal")

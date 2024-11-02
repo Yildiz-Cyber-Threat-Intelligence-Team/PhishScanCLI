@@ -5,9 +5,22 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+
+	"github.com/joho/godotenv"
 )
 
-const apiKey = "AIzaSyDjrV9r8kM-hr3MskbeqziqSXAa2PRrfas"
+var apiKey string
+
+func init() {
+
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Error loading .env file")
+	}
+
+	apiKey = os.Getenv("GOOGLESB_API_KEY")
+}
 
 func CheckPhishingGoogleSB(url string) (int, error) {
 

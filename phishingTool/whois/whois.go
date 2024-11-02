@@ -5,10 +5,23 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
-const apiKey = "at_kuDHGYSAMTMjkpB334ELf1OJt8hHw"
+var apiKey string
+
+func init() {
+
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Error loading .env file")
+	}
+
+	apiKey = os.Getenv("WHOIS_API_KEY")
+}
 
 type WhoisRecord struct {
 	CreatedDate string `json:"createdDate"`

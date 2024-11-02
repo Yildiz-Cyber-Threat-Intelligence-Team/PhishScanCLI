@@ -2,10 +2,26 @@ package abuseIp
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+
+	"github.com/joho/godotenv"
 )
+
+var apiKey string
+
+func init() {
+
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Error loading .env file")
+	}
+
+	apiKey = os.Getenv("ABUSEIP_API_KEY")
+}
 
 type AbuseIPDBResponse struct {
 	Data struct {
@@ -29,7 +45,7 @@ func CheckURLInAbuseIPDB(rawURL string) (int, error) {
 	req.URL.RawQuery = queryParams.Encode()
 
 	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Key", "c65c69ea981e2ac50aa4d6ee603d703d148b06ec50e4e1ecf4f701ed31d10cc6d85ef766023d5a65") //API Key
+	req.Header.Add("Key", apiKey) //API Key
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -57,4 +73,3 @@ func CheckURLInAbuseIPDB(rawURL string) (int, error) {
 		return 1, nil
 	}
 }
-
