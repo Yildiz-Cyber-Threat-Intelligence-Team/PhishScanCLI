@@ -2,16 +2,32 @@ package IPQS
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+
+	"github.com/joho/godotenv"
 )
+
+var apiKey string
+
+func init() {
+
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Error loading .env file")
+	}
+
+	apiKey = os.Getenv("IPQS_API_KEY")
+}
 
 type IPQS struct {
 	Key string
 }
 
 func NewIPQSClient() *IPQS {
-	return &IPQS{Key: "bBCLuOX94Hag9c0DtlHpj5UZxYgyA9al"}
+	return &IPQS{Key: apiKey}
 }
 
 func (ipqs *IPQS) MaliciousURLScannerAPI(inputURL string, params map[string]string) (map[string]interface{}, error) {
