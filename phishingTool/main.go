@@ -10,6 +10,7 @@ import (
 	abuseIp "phishingTool/abuseIP"
 	"phishingTool/fishAnimation"
 	"phishingTool/googleSB"
+	"phishingTool/possiblePhishing"
 	"phishingTool/usom"
 	"phishingTool/virustotal"
 	"phishingTool/whois"
@@ -101,6 +102,13 @@ func riskEvaluate(urlStr string) string {
 	return "Not a phishing site (Risk Point: " + fmt.Sprint(riskPoint) + ")"
 }
 
+func cleanURL(url string) string {
+	url = strings.TrimPrefix(url, "http://")
+	url = strings.TrimPrefix(url, "https://")
+	url = strings.TrimPrefix(url, "www.")
+	return url
+}
+
 func main() {
 
 	err := godotenv.Load()
@@ -114,6 +122,7 @@ func main() {
 	yildizAnimation.PrintAnimation()
 	fishAnimation.AnimateFish()
 	urlPtr := flag.String("u", "", "URL to check")
+	suspectUrls := flag.Bool("s", false, "Check for possible phishings, suspect URLs")
 	flag.Parse()
 
 	if *urlPtr == "" {
@@ -121,9 +130,17 @@ func main() {
 		return
 	}
 
+	cleanedURL := cleanURL(*urlPtr)
+	fmt.Println("Checking URL:", cleanedURL)
+
+	if *suspectUrls {
+		possiblePhishing.CheckPhishing(cleanedURL)
+		fmt.Println("Check suspect URLs in suspectUrls.txt")
+	}
+
 	ipqs := IPQualityScore.IPQS{Key: ipqsApiKey}
 	params := map[string]string{}
-	ipqsResult, err := ipqs.MaliciousURLScannerAPI(*urlPtr, params)
+	ipqsResult, err := ipqs.MaliciousURLScannerAPI(cleanedURL, params)
 	if err != nil {
 		fmt.Println("Error during IPQualityScore check:", err)
 		return
@@ -135,7 +152,7 @@ func main() {
 		fmt.Println("URL not found in IPQualityScore")
 	}
 
-	usomResult, usomDetails := usom.CheckPhishing(*urlPtr)
+	usomResult, usomDetails := usom.CheckPhishing(cleanedURL)
 	if usomResult {
 		fmt.Printf("URL found as phishing in USOM: %v\n", usomDetails)
 		return
@@ -143,7 +160,7 @@ func main() {
 		fmt.Println("URL not found in USOM")
 	}
 
-	googleSBResult, googleSBDetails := googleSB.CheckPhishingGoogleSB(*urlPtr)
+	googleSBResult, googleSBDetails := googleSB.CheckPhishingGoogleSB(cleanedURL)
 	if googleSBResult == 1 {
 		fmt.Printf("URL found as phishing in Google Safe Browsing: %v\n", googleSBDetails)
 	} else if googleSBResult == -1 {
@@ -153,7 +170,7 @@ func main() {
 	}
 
 	apiKey := virustotalApiKey
-	vtResult := virustotal.CheckPhishingVirusTotal(apiKey, *urlPtr)
+	vtResult := virustotal.CheckPhishingVirusTotal(apiKey, cleanedURL)
 	if vtResult == 1 {
 		fmt.Println("URL found as phishing in VirusTotal")
 		return
@@ -161,7 +178,7 @@ func main() {
 		fmt.Println("URL not found in VirusTotal")
 	}
 
-	abuseIpResult, abuseIPDetails := abuseIp.CheckURLInAbuseIPDB(*urlPtr)
+	abuseIpResult, abuseIPDetails := abuseIp.CheckURLInAbuseIPDB(cleanedURL)
 	if abuseIpResult == 1 {
 		fmt.Printf("URL found as phishing in AbuseIP: %v\n", abuseIPDetails)
 		return
@@ -171,6 +188,14 @@ func main() {
 		fmt.Println("URL not found in AbuseIP")
 	}
 
-	result := riskEvaluate(*urlPtr)
-	fmt.Println(result)
+	var fullURL string
+	if strings.HasPrefix(*urlPtr, "https://") {
+		fullURL = "https://" + cleanedURL
+	} else {
+		fullURL = "http://" + cleanedURL
+	}
+
+	result := riskEvaluate(fullURL)
+
+	fmt.Println("Sonuç:", result)
 }

@@ -1,11 +1,12 @@
-package possibleSuspectUrls
+package possiblePhishing
 
 import (
 	"crypto/tls"
-	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -35,16 +36,42 @@ func generateVariations(domain string) []string {
 // Generating domain variations with similar characters
 func swapSimilarCharacters(domain string) []string {
 	similarChars := map[rune][]rune{
-		'a': {'à', 'á', 'â', 'ä', 'ã', 'å'},
-		'e': {'è', 'é', 'ê', 'ë'},
-		'i': {'ì', 'í', 'î', 'ï', '1'},
-		'o': {'ò', 'ó', 'ô', 'ö', 'õ', '0'},
-		'u': {'ù', 'ú', 'û', 'ü'},
-		'c': {'ç'},
-		'y': {'ý', 'ÿ'},
-		'l': {'1', 'I'},
-		'I': {'l', '1'},
-		's': {'5', 'z'},
+		'a': {'à', 'á', 'â', 'ä', 'ã', 'å', 'α', 'а'},
+		'b': {'ɓ', 'β', 'в'},
+		'c': {'ç', 'ć', 'č', 'ċ', 'с'},
+		'd': {'đ', 'ɗ', 'д'},
+		'e': {'è', 'é', 'ê', 'ë', 'ε', 'е'},
+		'f': {'ƒ'},
+		'g': {'ĝ', 'ğ', 'ǧ', 'ġ', 'г'},
+		'h': {'ħ', 'н'},
+		'i': {'ì', 'í', 'î', 'ï', 'ι', 'і'},
+		'j': {'ј'},
+		'k': {'ķ', 'к'},
+		'l': {'ł', '1', 'I', 'ⅼ'},
+		'm': {'м'},
+		'n': {'ñ', 'ń', 'η', 'п'},
+		'o': {'ò', 'ó', 'ô', 'ö', 'õ', 'ο', 'о'},
+		'p': {'þ', 'ρ', 'р'},
+		'q': {'ԛ'},
+		'r': {'ř', 'г'},
+		's': {'ş', 'ś', 'š', 'ѕ'},
+		't': {'ť', 'т'},
+		'u': {'ù', 'ú', 'û', 'ü', 'υ', 'у'},
+		'v': {'ν'},
+		'w': {'ŵ'},
+		'x': {'х'},
+		'y': {'ý', 'ÿ', 'у'},
+		'z': {'ž', 'ź', 'ż', 'ʐ'},
+		'0': {'ο', 'О', '0'},
+		'1': {'ⅼ', 'І'},
+		'2': {'２'},
+		'3': {'з'},
+		'4': {'４'},
+		'5': {'５'},
+		'6': {'６'},
+		'7': {'７'},
+		'8': {'８'},
+		'9': {'９'},
 	}
 
 	var variations []string
@@ -180,22 +207,23 @@ func checkDNS(domain string) bool {
 	return err == nil
 }
 
-func main() {
-	urlPtr := flag.String("t", "", "Domain URL to check")
-	flag.Parse()
+func CheckPhishing(url string) {
+	domain := url
+	variations := generateVariations(domain)
 
-	if *urlPtr == "" {
-		log.Println("Please enter a URL to check.")
+	file, err := os.Create("suspectUrls.txt")
+	if err != nil {
+		fmt.Println("Dosya oluşturulamadı:", err)
 		return
 	}
-
-	domain := *urlPtr
-	variations := generateVariations(domain)
+	defer file.Close()
 
 	for _, variation := range variations {
 		if checkDomain(variation) {
-			log.Printf("Suspicious domain found: %s\n", variation) // Print accessed domain
+			_, err := file.WriteString(variation + "\n")
+			if err != nil {
+				fmt.Println("Dosyaya yazılamadı:", err)
+			}
 		}
 	}
 }
-
